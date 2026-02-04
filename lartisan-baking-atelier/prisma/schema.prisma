@@ -1,0 +1,446 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  STUDENT
+  ADMIN
+  INSTRUCTOR
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ============================================
+// USER MODELS
+// ============================================
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String?
+  
+  // Authentication
+  passwordHash  String?
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(STUDENT)
+  
+  // PDPA Compliance
+  pdpaConsent           Boolean   @default(false)
+  pdpaConsentDate       DateTime?
+  marketingConsent      Boolean   @default(false)
+  marketingConsentDate  DateTime?
+  
+  // Profile
+  phone     String?
+  bio       String? @db.Text
+  birthday  DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  orders       Order[]
+  cart         Cart?
+  progress     Progress[]
+  reviews      Review[]
+  achievements UserAchievement[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================
+// COURSE MODELS
+// ============================================
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String? @db.Text
+  image       String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  courses Course[]
+  
+  @@index([slug])
+}
+
+model Course {
+  id               String  @id @default(cuid())
+  title            String
+  slug             String  @unique
+  description      String  @db.Text
+  shortDescription String? @db.Text
+  
+  // Pricing
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  gstIncluded    Boolean  @default(true)
+  
+  // Content
+  categoryId String
+  images     String[]
+  curriculum Json? // Structured course curriculum
+  
+  // Metadata
+  videoCount Int
+  duration   Int // in minutes
+  level      CourseLevel
+  featured   Boolean @default(false)
+  published  Boolean @default(false)
+  
+  // Inventory (null for digital products)
+  stock             Int?
+  lowStockThreshold Int?
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  category  Category   @relation(fields: [categoryId], references: [id])
+  videos    Video[]
+  orders    OrderItem[]
+  cartItems CartItem[]
+  progress  Progress[]
+  reviews   Review[]
+  
+  @@index([slug])
+  @@index([categoryId, published])
+  @@index([featured, published])
+}
+
+model Video {
+  id          String  @id @default(cuid())
+  courseId    String
+  title       String
+  description String? @db.Text
+  
+  // Video metadata
+  durationSeconds Int
+  videoUrl        String
+  thumbnailUrl    String?
+  orderIndex      Int
+  published       Boolean @default(false)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  course   Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress Progress[]
+  
+  @@index([courseId])
+  @@index([courseId, orderIndex])
+}
+
+// ============================================
+// E-COMMERCE MODELS
+// ============================================
+
+model Cart {
+  id     String  @id @default(cuid())
+  userId String? @unique
+  
+  // Session for guest users
+  sessionId String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+  
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id       String @id @default(cuid())
+  cartId   String
+  courseId String
+  quantity Int    @default(1)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([cartId, courseId])
+  @@index([cartId])
+  @@index([courseId])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  userId      String?
+  status      OrderStatus @default(PENDING)
+  
+  // Pricing with Singapore GST (9%)
+  subtotal       Decimal @db.Decimal(10, 2)
+  gstAmount      Decimal @db.Decimal(10, 2) // 9% GST
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  total          Decimal @db.Decimal(10, 2)
+  currency       String  @default("SGD")
+  
+  // Payment
+  stripePaymentIntentId String?
+  
+  // Customer Info
+  customerEmail String
+  customerName  String?
+  billingAddress Json?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user    User?       @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+  
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  courseId String
+  quantity Int    @default(1)
+  
+  // Pricing at time of purchase
+  unitPrice Decimal @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  // Relations
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id])
+  
+  @@index([orderId])
+  @@index([courseId])
+}
+
+model Payment {
+  id     String        @id @default(cuid())
+  orderId String       @unique
+  status  PaymentStatus @default(PENDING)
+  
+  // Stripe
+  stripePaymentIntentId String?
+  stripeChargeId        String?
+  
+  // Refund info
+  refundAmount Decimal? @db.Decimal(10, 2)
+  refundReason String?
+  refundedAt   DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@index([orderId])
+  @@index([stripePaymentIntentId])
+}
+
+// ============================================
+// LEARNING MODELS
+// ============================================
+
+model Progress {
+  id     String @id @default(cuid())
+  userId String
+  courseId String
+  videoId  String
+  
+  // Progress tracking
+  completed        Boolean @default(false)
+  progressPercent  Int     @default(0) // 0-100
+  lastPositionSeconds Int @default(0)
+  
+  // Timestamps
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  video  Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, videoId])
+  @@index([userId, courseId])
+  @@index([userId, videoId])
+  @@index([completed])
+}
+
+model Review {
+  id     String @id @default(cuid())
+  userId String
+  courseId String
+  
+  // Review content
+  rating  Int     @db.SmallInt // 1-5
+  content String? @db.Text
+  
+  // Moderation
+  approved Boolean @default(true)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId])
+  @@index([courseId])
+  @@index([courseId, rating])
+  @@index([approved])
+}
+
+// ============================================
+// GAMIFICATION MODELS
+// ============================================
+
+model Achievement {
+  id          String @id @default(cuid())
+  name        String @unique
+  slug        String @unique
+  description String @db.Text
+  
+  // Display
+  icon        String
+  color       String? // hex color code
+  
+  // Criteria
+  criteriaType String // e.g., 'courses_completed', 'watch_time', 'streak'
+  criteriaValue Int  // threshold to unlock
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  users UserAchievement[]
+  
+  @@index([slug])
+}
+
+model UserAchievement {
+  id            String @id @default(cuid())
+  userId        String
+  achievementId String
+  
+  // Progress
+  progress     Int @default(0)
+  targetValue  Int
+  
+  // Unlock info
+  unlocked Boolean   @default(false)
+  unlockedAt DateTime?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([userId, unlocked])
+}

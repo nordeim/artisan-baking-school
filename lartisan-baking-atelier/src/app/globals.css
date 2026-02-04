@@ -1,0 +1,437 @@
+@import "tailwindcss";
+
+/* ============================================
+   ÉDITION BOULANGERIE - DESIGN SYSTEM
+   Artisanal Editorial Aesthetic for 
+   L'Artisan Baking Atelier
+   ============================================ */
+
+@theme {
+  /* ============================================
+     COLOR SYSTEM - HSB Derived
+     Inspired by baking ingredients and processes
+     ============================================ */
+
+  /* Primary Neutral - Flour/Bone */
+  --color-bone: hsl(42, 15%, 94%);
+  --color-bone-dark: hsl(42, 18%, 86%);
+  --color-bone-darker: hsl(42, 20%, 78%);
+  --color-bone-light: hsl(42, 12%, 97%);
+
+  /* Primary Warmth - Sourdough/Golden Crust */
+  --color-sourdough: hsl(32, 40%, 72%);
+  --color-sourdough-dark: hsl(32, 45%, 60%);
+  --color-sourdough-darker: hsl(32, 50%, 48%);
+  --color-sourdough-light: hsl(32, 35%, 82%);
+
+  /* High Contrast Accent - Burnt/Caramelization */
+  --color-burnt: hsl(18, 65%, 28%);
+  --color-burnt-light: hsl(18, 40%, 40%);
+  --color-burnt-lighter: hsl(18, 30%, 52%);
+  --color-burnt-dark: hsl(18, 70%, 22%);
+
+  /* Secondary Accent - Copper/Cookware */
+  --color-copper: hsl(21, 50%, 52%);
+  --color-copper-dark: hsl(21, 55%, 42%);
+  --color-copper-light: hsl(21, 45%, 62%);
+
+  /* Neutral Scale */
+  --color-charcoal: hsl(0, 0%, 20%);
+  --color-charcoal-light: hsl(0, 0%, 35%);
+  --color-stone: hsl(30, 10%, 55%);
+  --color-stone-light: hsl(30, 8%, 70%);
+
+  /* Semantic Colors */
+  --color-background: var(--color-bone);
+  --color-foreground: var(--color-charcoal);
+  --color-primary: var(--color-burnt);
+  --color-primary-foreground: hsl(42, 15%, 94%);
+  --color-secondary: var(--color-sourdough);
+  --color-secondary-foreground: var(--color-charcoal);
+  --color-accent: var(--color-copper);
+  --color-accent-foreground: hsl(42, 15%, 94%);
+  --color-muted: var(--color-bone-dark);
+  --color-muted-foreground: var(--color-stone);
+  --color-border: var(--color-bone-darker);
+  --color-input: var(--color-bone-darker);
+  --color-ring: var(--color-copper);
+
+  /* Status Colors */
+  --color-success: hsl(142, 76%, 36%);
+  --color-warning: hsl(38, 92%, 50%);
+  --color-error: hsl(0, 84%, 60%);
+  --color-info: hsl(217, 91%, 60%);
+
+  /* ============================================
+     TYPOGRAPHY SYSTEM
+     Playfair Display + Inter pairing
+     ============================================ */
+  --font-serif: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Font Sizes - Modular Scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-5xl: 3rem;
+  --font-size-6xl: 3.75rem;
+  --font-size-7xl: 4.5rem;
+
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+
+  /* Letter Spacing */
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
+
+  /* ============================================
+     SPACING SYSTEM
+     Based on 0.25rem (4px) grid
+     ============================================ */
+  --spacing-px: 1px;
+  --spacing-0: 0;
+  --spacing-0-5: 0.125rem;
+  --spacing-1: 0.25rem;
+  --spacing-1-5: 0.375rem;
+  --spacing-2: 0.5rem;
+  --spacing-2-5: 0.625rem;
+  --spacing-3: 0.75rem;
+  --spacing-3-5: 0.875rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-7: 1.75rem;
+  --spacing-8: 2rem;
+  --spacing-9: 2.25rem;
+  --spacing-10: 2.5rem;
+  --spacing-11: 2.75rem;
+  --spacing-12: 3rem;
+  --spacing-14: 3.5rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+  --spacing-28: 7rem;
+  --spacing-32: 8rem;
+  --spacing-36: 9rem;
+  --spacing-40: 10rem;
+  --spacing-44: 11rem;
+  --spacing-48: 12rem;
+  --spacing-52: 13rem;
+  --spacing-56: 14rem;
+  --spacing-60: 15rem;
+  --spacing-64: 16rem;
+  --spacing-72: 18rem;
+  --spacing-80: 20rem;
+  --spacing-96: 24rem;
+
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+  --radius-none: 0;
+  --radius-sm: 0.125rem;
+  --radius-default: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ============================================
+     SHADOWS
+     Subtle, warm shadows for depth
+     ============================================ */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-default:
+    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* Warm shadow variant */
+  --shadow-warm: 0 4px 20px -2px hsl(32 40% 72% / 0.15);
+  --shadow-warm-lg: 0 8px 30px -4px hsl(32 40% 72% / 0.2);
+
+  /* ============================================
+     ANIMATION & TRANSITIONS
+     Spring physics for organic motion
+     ============================================ */
+
+  /* Spring Physics Constants */
+  --spring-stiffness: 180;
+  --spring-damping: 22;
+  --spring-mass: 1;
+
+  /* Animation Durations */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+  --duration-slower: 700ms;
+
+  /* Easing Functions */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Custom Animations */
+  --animate-spring-bounce: spring-bounce 0.6s var(--ease-spring);
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-fade-out: fade-out 0.2s ease-in;
+  --animate-slide-up: slide-up 0.4s var(--ease-out);
+  --animate-slide-down: slide-down 0.4s var(--ease-out);
+  --animate-scale-in: scale-in 0.3s var(--ease-spring);
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes spring-bounce {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* ============================================
+     Z-INDEX SCALE
+     ============================================ */
+  --z-base: 0;
+  --z-dropdown: 200;
+  --z-sticky: 300;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-tooltip: 600;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    @apply leading-relaxed;
+  }
+
+  /* Typography Defaults */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif font-semibold tracking-tight;
+    @apply text-charcoal;
+  }
+
+  h1 {
+    @apply text-5xl leading-tight;
+  }
+
+  h2 {
+    @apply text-4xl leading-tight;
+  }
+
+  h3 {
+    @apply text-3xl leading-snug;
+  }
+
+  h4 {
+    @apply text-2xl leading-snug;
+  }
+
+  h5 {
+    @apply text-xl leading-snug;
+  }
+
+  h6 {
+    @apply text-lg leading-snug;
+  }
+
+  /* Focus States */
+  :focus-visible {
+    @apply outline-none ring-2 ring-copper ring-offset-2 ring-offset-bone;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-sourdough/30 text-charcoal;
+  }
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   CUSTOM UTILITY CLASSES
+   ============================================ */
+
+@layer utilities {
+  /* Text Balance - Prevent Orphans */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      135deg,
+      var(--color-burnt) 0%,
+      var(--color-copper) 100%
+    );
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-bone/80 backdrop-blur-md;
+  }
+
+  /* Warm Shadow */
+  .shadow-warm {
+    box-shadow: var(--shadow-warm);
+  }
+
+  .shadow-warm-lg {
+    box-shadow: var(--shadow-warm-lg);
+  }
+
+  /* Spring Animation Classes */
+  .animate-spring {
+    transition: transform 0.4s var(--ease-spring);
+  }
+
+  .animate-spring:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Container Padding */
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8 xl:px-12;
+  }
+
+  /* Section Spacing */
+  .section-spacing {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+
+  /* Prose Styles */
+  .prose-editorial {
+    @apply prose prose-lg;
+    @apply prose-headings:font-serif prose-headings:text-charcoal;
+    @apply prose-p:text-charcoal-light prose-p:leading-relaxed;
+    @apply prose-a:text-burnt prose-a:no-underline hover:prose-a:underline;
+    @apply prose-strong:text-charcoal;
+    @apply prose-blockquote:border-l-copper prose-blockquote:bg-bone-dark/50;
+    @apply prose-code:text-copper;
+    @apply max-w-none;
+  }
+}
