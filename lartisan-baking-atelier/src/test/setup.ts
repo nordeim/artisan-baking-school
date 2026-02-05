@@ -1,6 +1,10 @@
 import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
+// Polyfill TextEncoder/TextDecoder for jsdom (required by jose library)
+import { TextEncoder, TextDecoder } from "util";
+Object.assign(global, { TextEncoder, TextDecoder });
+
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -33,7 +37,7 @@ vi.mock("next/headers", () => ({
 
 // Extend matchers
 declare module "vitest" {
-  interface Assertion<T = unknown> {
+  interface Assertion {
     toBeInTheDocument(): void;
     toHaveClass(className: string): void;
     toHaveTextContent(text: string | RegExp): void;

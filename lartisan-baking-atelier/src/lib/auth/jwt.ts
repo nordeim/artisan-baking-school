@@ -6,15 +6,24 @@ import { SignJWT, jwtVerify } from "jose";
  * Supports access tokens (short-lived) and refresh tokens (long-lived)
  */
 
-// JWT Secrets from environment variables
-const ACCESS_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-key-at-least-32-characters",
-);
+/**
+ * Get the access token secret (lazy evaluation for test compatibility)
+ */
+function getAccessTokenSecret(): Uint8Array {
+  const secret =
+    process.env.JWT_SECRET || "fallback-secret-key-at-least-32-characters";
+  return new TextEncoder().encode(secret);
+}
 
-const REFRESH_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.JWT_REFRESH_SECRET ||
-    "fallback-refresh-secret-key-at-least-32-chars",
-);
+/**
+ * Get the refresh token secret (lazy evaluation for test compatibility)
+ */
+function getRefreshTokenSecret(): Uint8Array {
+  const secret =
+    process.env.JWT_REFRESH_SECRET ||
+    "fallback-refresh-secret-key-at-least-32-chars";
+  return new TextEncoder().encode(secret);
+}
 
 // Token expiry times
 const ACCESS_TOKEN_EXPIRY = "7d"; // 7 days
@@ -47,7 +56,7 @@ export async function signAccessToken(payload: JWTPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(ACCESS_TOKEN_EXPIRY)
-    .sign(ACCESS_TOKEN_SECRET);
+    .sign(getAccessTokenSecret());
 }
 
 /**
@@ -68,7 +77,7 @@ export async function signRefreshToken(payload: JWTPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(REFRESH_TOKEN_EXPIRY)
-    .sign(REFRESH_TOKEN_SECRET);
+    .sign(getRefreshTokenSecret());
 }
 
 /**
@@ -83,7 +92,7 @@ export async function signRefreshToken(payload: JWTPayload): Promise<string> {
  * console.log(payload.userId); // '123'
  */
 export async function verifyAccessToken(token: string): Promise<JWTPayload> {
-  const { payload } = await jwtVerify(token, ACCESS_TOKEN_SECRET);
+  const { payload } = await jwtVerify(token, getAccessTokenSecret());
   return payload as unknown as JWTPayload;
 }
 
@@ -98,7 +107,7 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload> {
  * const payload = await verifyRefreshToken(refreshToken);
  */
 export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
-  const { payload } = await jwtVerify(token, REFRESH_TOKEN_SECRET);
+  const { payload } = await jwtVerify(token, getRefreshTokenSecret());
   return payload as unknown as JWTPayload;
 }
 
