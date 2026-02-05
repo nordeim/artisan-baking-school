@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from "jose/node";
+import { SignJWT, jwtVerify } from "jose";
 
 /**
  * JWT Authentication Utilities
@@ -84,7 +84,7 @@ export async function signRefreshToken(payload: JWTPayload): Promise<string> {
  */
 export async function verifyAccessToken(token: string): Promise<JWTPayload> {
   const { payload } = await jwtVerify(token, ACCESS_TOKEN_SECRET);
-  return payload as JWTPayload;
+  return payload as unknown as JWTPayload;
 }
 
 /**
@@ -99,7 +99,7 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload> {
  */
 export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
   const { payload } = await jwtVerify(token, REFRESH_TOKEN_SECRET);
-  return payload as JWTPayload;
+  return payload as unknown as JWTPayload;
 }
 
 /**

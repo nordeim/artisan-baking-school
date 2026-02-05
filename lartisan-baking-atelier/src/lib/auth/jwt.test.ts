@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { SignJWT } from "jose";
 import {
   signAccessToken,
   signRefreshToken,
