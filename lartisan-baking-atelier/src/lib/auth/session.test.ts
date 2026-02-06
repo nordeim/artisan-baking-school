@@ -7,12 +7,27 @@ import {
   destroySession,
   type SessionData,
 } from "./session";
-import { signAccessToken, signRefreshToken } from "./jwt";
 
 // Mock next/headers
 vi.mock("next/headers", () => ({
   cookies: vi.fn(),
 }));
+
+// Mock JWT module
+vi.mock("./jwt", () => ({
+  signAccessToken: vi.fn(),
+  signRefreshToken: vi.fn(),
+  verifyAccessToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+}));
+
+// Import mocked functions after mock declaration
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from "./jwt";
 
 describe("Session Management", () => {
   let mockCookieStore: {
@@ -43,6 +58,10 @@ describe("Session Management", () => {
       ),
     );
     vi.clearAllMocks();
+
+    // Set up default mock return values
+    vi.mocked(signAccessToken).mockResolvedValue("mock-access-token");
+    vi.mocked(signRefreshToken).mockResolvedValue("mock-refresh-token");
   });
 
   describe("createSession", () => {
@@ -59,7 +78,7 @@ describe("Session Management", () => {
       // Check access token cookie
       expect(mockCookieStore.set).toHaveBeenCalledWith(
         "access_token",
-        expect.any(String),
+        "mock-access-token",
         expect.objectContaining({
           httpOnly: true,
           secure: false, // false in test environment
@@ -72,7 +91,7 @@ describe("Session Management", () => {
       // Check refresh token cookie
       expect(mockCookieStore.set).toHaveBeenCalledWith(
         "refresh_token",
-        expect.any(String),
+        "mock-refresh-token",
         expect.objectContaining({
           httpOnly: true,
           secure: false,
@@ -83,32 +102,27 @@ describe("Session Management", () => {
       );
 
       // Verify returned session data
-      expect(result).toMatchObject({
+      expect(result).toEqual({
         userId,
         email,
         role,
-        accessToken: expect.any(String),
-        refreshToken: expect.any(String),
+        accessToken: "mock-access-token",
+        refreshToken: "mock-refresh-token",
       });
     });
 
-    it("should have correct cookie options in development", async () => {
-      await createSession({
-        userId: "user-123",
-        email: "test@example.com",
-        role: "STUDENT",
-      });
+    it("should handle token generation errors gracefully", async () => {
+      vi.mocked(signAccessToken).mockRejectedValue(
+        new Error("Token generation failed"),
+      );
 
-      // Check cookie options are correct
-      const calls = mockCookieStore.set.mock.calls;
-      calls.forEach((call) => {
-        expect(call[2]).toMatchObject({
-          httpOnly: true,
-          secure: false, // false in development/test
-          sameSite: "strict",
-          path: "/",
-        });
-      });
+      await expect(
+        createSession({
+          userId: "user-123",
+          email: "test@example.com",
+          role: "STUDENT",
+        }),
+      ).rejects.toThrow("Token generation failed");
     });
   });
 
@@ -120,23 +134,25 @@ describe("Session Management", () => {
         role: "STUDENT",
       };
 
-      const accessToken = await signAccessToken(payload);
+      vi.mocked(verifyAccessToken).mockResolvedValue(payload);
 
       mockCookieStore.get.mockImplementation((name: string) => {
         if (name === "access_token") {
-          return { value: accessToken };
+          return { value: "valid-access-token" };
         }
         return undefined;
       });
 
       const session = await getSession();
 
-      expect(session).toMatchObject({
+      expect(session).toEqual({
         userId: payload.userId,
         email: payload.email,
         role: payload.role,
-        accessToken: expect.any(String),
+        accessToken: "valid-access-token",
+        refreshToken: "",
       });
+      expect(verifyAccessToken).toHaveBeenCalledWith("valid-access-token");
     });
 
     it("should return null when no access token exists", async () => {
@@ -147,10 +163,14 @@ describe("Session Management", () => {
       expect(session).toBeNull();
     });
 
-    it("should return null for invalid token", async () => {
+    it("should return null when access token is invalid and no refresh token", async () => {
+      vi.mocked(verifyAccessToken).mockRejectedValue(
+        new Error("Invalid token"),
+      );
+
       mockCookieStore.get.mockImplementation((name: string) => {
         if (name === "access_token") {
-          return { value: "invalid.token.here" };
+          return { value: "invalid.token" };
         }
         return undefined;
       });
@@ -167,28 +187,37 @@ describe("Session Management", () => {
         role: "STUDENT",
       };
 
-      const refreshToken = await signRefreshToken(refreshPayload);
+      // Set up mocks in order: first access token verification fails, then refresh works
+      vi.mocked(verifyAccessToken).mockRejectedValueOnce(
+        new Error("Invalid token"),
+      );
+      vi.mocked(verifyRefreshToken).mockResolvedValueOnce(refreshPayload);
+      // When refreshSession calls createSession, these should return new tokens
+      vi.mocked(signAccessToken).mockResolvedValueOnce("new-access-token");
+      vi.mocked(signRefreshToken).mockResolvedValueOnce("new-refresh-token");
 
       mockCookieStore.get.mockImplementation((name: string) => {
         if (name === "access_token") {
           return { value: "invalid.token" };
         }
         if (name === "refresh_token") {
-          return { value: refreshToken };
+          return { value: "valid-refresh-token" };
         }
         return undefined;
       });
 
-      // getSession should attempt refresh when access token is invalid
-      // and return a new session with valid refresh token
       const session = await getSession();
-      expect(session).toMatchObject({
+
+      // When getSession calls refreshSession internally, it returns the result from createSession
+      // which uses the mocked signAccessToken and signRefreshToken
+      expect(session).toEqual({
         userId: refreshPayload.userId,
         email: refreshPayload.email,
         role: refreshPayload.role,
-        accessToken: expect.any(String),
-        refreshToken: expect.any(String),
+        accessToken: "new-access-token",
+        refreshToken: "new-refresh-token",
       });
+      expect(verifyRefreshToken).toHaveBeenCalledWith("valid-refresh-token");
     });
   });
 
@@ -200,27 +229,32 @@ describe("Session Management", () => {
         role: "STUDENT",
       };
 
-      const refreshToken = await signRefreshToken(payload);
+      vi.mocked(verifyRefreshToken).mockResolvedValueOnce(payload);
+      // When refreshSession calls createSession, it generates new tokens
+      vi.mocked(signAccessToken).mockResolvedValueOnce("new-access-token");
+      vi.mocked(signRefreshToken).mockResolvedValueOnce("new-refresh-token");
 
       mockCookieStore.get.mockImplementation((name: string) => {
         if (name === "refresh_token") {
-          return { value: refreshToken };
+          return { value: "valid-refresh-token" };
         }
         return undefined;
       });
 
-      const result = await refreshSession();
+      const session = await refreshSession();
 
-      expect(result).toMatchObject({
+      expect(session).toEqual({
         userId: payload.userId,
         email: payload.email,
         role: payload.role,
-        accessToken: expect.any(String),
-        refreshToken: expect.any(String),
+        accessToken: "new-access-token",
+        refreshToken: "new-refresh-token",
       });
-
-      // Verify new cookies are set
-      expect(mockCookieStore.set).toHaveBeenCalledTimes(2);
+      expect(mockCookieStore.set).toHaveBeenCalledWith(
+        "access_token",
+        "new-access-token",
+        expect.any(Object),
+      );
     });
 
     it("should throw error when no refresh token exists", async () => {
@@ -230,19 +264,25 @@ describe("Session Management", () => {
     });
 
     it("should throw error for invalid refresh token", async () => {
+      // Make verifyRefreshToken throw an error
+      vi.mocked(verifyRefreshToken).mockRejectedValueOnce(
+        new Error("Token verification failed"),
+      );
+
       mockCookieStore.get.mockImplementation((name: string) => {
         if (name === "refresh_token") {
-          return { value: "invalid.token" };
+          return { value: "invalid-refresh-token" };
         }
         return undefined;
       });
 
-      await expect(refreshSession()).rejects.toThrow();
+      // refreshSession catches the error and throws "Invalid refresh token"
+      await expect(refreshSession()).rejects.toThrow("Invalid refresh token");
     });
   });
 
   describe("destroySession", () => {
-    it("should clear both access and refresh token cookies", async () => {
+    it("should clear all session cookies", async () => {
       await destroySession();
 
       expect(mockCookieStore.delete).toHaveBeenCalledTimes(2);
@@ -250,32 +290,15 @@ describe("Session Management", () => {
       expect(mockCookieStore.delete).toHaveBeenCalledWith("refresh_token");
     });
 
-    it("should handle gracefully if cookies don't exist", async () => {
+    it("should handle missing cookies gracefully without throwing", async () => {
       mockCookieStore.delete.mockImplementation(() => {
-        // In real implementation, delete doesn't throw if cookie doesn't exist
-        return undefined;
+        throw new Error("Cookie not found");
       });
 
-      // Should not throw
-      await expect(destroySession()).resolves.not.toThrow();
-    });
-  });
-
-  describe("SessionData type", () => {
-    it("should have correct structure", async () => {
-      const session: SessionData = {
-        userId: "user-123",
-        email: "test@example.com",
-        role: "STUDENT",
-        accessToken: "access-token",
-        refreshToken: "refresh-token",
-      };
-
-      expect(session.userId).toBe("user-123");
-      expect(session.email).toBe("test@example.com");
-      expect(session.role).toBe("STUDENT");
-      expect(session.accessToken).toBe("access-token");
-      expect(session.refreshToken).toBe("refresh-token");
+      // Should not throw even if cookies don't exist
+      await expect(destroySession()).resolves.toBeUndefined();
+      expect(mockCookieStore.delete).toHaveBeenCalledWith("access_token");
+      expect(mockCookieStore.delete).toHaveBeenCalledWith("refresh_token");
     });
   });
 });
