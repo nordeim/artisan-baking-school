@@ -1,19 +1,33 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { POST } from "./route";
-import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth/password";
-import * as sessionModule from "@/lib/auth/session";
 
-// Mock the session module
+// Mock prisma
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn(),
+    },
+  },
+}));
+
+// Import mocked prisma after mock declaration
+import { prisma } from "@/lib/prisma";
+
+// Mock password verification
+vi.mock("@/lib/auth/password", () => ({
+  verifyPassword: vi.fn(),
+  hashPassword: vi.fn(),
+}));
+import { verifyPassword } from "@/lib/auth/password";
+
+// Mock session
 vi.mock("@/lib/auth/session", () => ({
   createSession: vi.fn(),
 }));
+import { createSession } from "@/lib/auth/session";
 
 describe("POST /api/auth/login", () => {
-  const mockCreateSession = sessionModule.createSession as vi.Mock;
-
-  beforeEach(async () => {
-    await prisma.user.deleteMany();
+  beforeEach(() => {
     vi.clearAllMocks();
   });
 
@@ -28,19 +42,19 @@ describe("POST /api/auth/login", () => {
   describe("successful login", () => {
     it("should login with valid credentials and return user data", async () => {
       // Arrange
-      const password = "SecurePass123!";
-      const passwordHash = await hashPassword(password);
-      const user = await prisma.user.create({
-        data: {
-          email: "test@example.com",
-          passwordHash,
-          name: "Test User",
-          pdpaConsent: true,
-          pdpaConsentDate: new Date(),
-        },
-      });
+      const user = {
+        id: "user-123",
+        email: "test@example.com",
+        passwordHash: "hashed-password",
+        name: "Test User",
+        role: "STUDENT",
+        createdAt: new Date("2026-01-25T10:00:00Z"),
+        updatedAt: new Date("2026-01-25T10:00:00Z"),
+      } as import("@prisma/client").User;
 
-      mockCreateSession.mockResolvedValue({
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(user);
+      vi.mocked(verifyPassword).mockResolvedValue(true);
+      vi.mocked(createSession).mockResolvedValue({
         accessToken: "mock-access-token",
         refreshToken: "mock-refresh-token",
         user: { id: user.id, email: user.email, role: user.role },
@@ -49,7 +63,7 @@ describe("POST /api/auth/login", () => {
       // Act
       const request = createRequest({
         email: "test@example.com",
-        password: password,
+        password: "SecurePass123!",
       });
       const response = await POST(request);
       const data = await response.json();
@@ -64,7 +78,14 @@ describe("POST /api/auth/login", () => {
         role: user.role,
         createdAt: user.createdAt.toISOString(),
       });
-      expect(mockCreateSession).toHaveBeenCalledWith({
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: "test@example.com" },
+      });
+      expect(verifyPassword).toHaveBeenCalledWith(
+        "SecurePass123!",
+        "hashed-password",
+      );
+      expect(createSession).toHaveBeenCalledWith({
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -73,19 +94,19 @@ describe("POST /api/auth/login", () => {
 
     it("should set authentication cookies on successful login", async () => {
       // Arrange
-      const password = "SecurePass123!";
-      const passwordHash = await hashPassword(password);
-      const user = await prisma.user.create({
-        data: {
-          email: "cookie@example.com",
-          passwordHash,
-          name: "Cookie Test",
-          pdpaConsent: true,
-          pdpaConsentDate: new Date(),
-        },
-      });
+      const user = {
+        id: "user-123",
+        email: "cookie@example.com",
+        passwordHash: "hashed-password",
+        name: "Cookie Test",
+        role: "STUDENT",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as import("@prisma/client").User;
 
-      mockCreateSession.mockResolvedValue({
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(user);
+      vi.mocked(verifyPassword).mockResolvedValue(true);
+      vi.mocked(createSession).mockResolvedValue({
         accessToken: "access-token-123",
         refreshToken: "refresh-token-456",
         user: { id: user.id, email: user.email, role: user.role },
@@ -94,7 +115,7 @@ describe("POST /api/auth/login", () => {
       // Act
       const request = createRequest({
         email: "cookie@example.com",
-        password: password,
+        password: "SecurePass123!",
       });
       const response = await POST(request);
       const setCookieHeader = response.headers.get("Set-Cookie");
@@ -110,6 +131,9 @@ describe("POST /api/auth/login", () => {
 
   describe("invalid credentials", () => {
     it("should return 401 for non-existent user", async () => {
+      // Arrange
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+
       // Act
       const request = createRequest({
         email: "nonexistent@example.com",
@@ -121,21 +145,23 @@ describe("POST /api/auth/login", () => {
       // Assert
       expect(response.status).toBe(401);
       expect(data.error).toBe("Invalid email or password");
-      expect(mockCreateSession).not.toHaveBeenCalled();
+      expect(createSession).not.toHaveBeenCalled();
     });
 
     it("should return 401 for wrong password", async () => {
       // Arrange
-      const passwordHash = await hashPassword("CorrectPass123!");
-      await prisma.user.create({
-        data: {
-          email: "test@example.com",
-          passwordHash,
-          name: "Test User",
-          pdpaConsent: true,
-          pdpaConsentDate: new Date(),
-        },
-      });
+      const user = {
+        id: "user-123",
+        email: "test@example.com",
+        passwordHash: "hashed-password",
+        name: "Test User",
+        role: "STUDENT",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as import("@prisma/client").User;
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(user);
+      vi.mocked(verifyPassword).mockResolvedValue(false);
 
       // Act
       const request = createRequest({
@@ -148,23 +174,23 @@ describe("POST /api/auth/login", () => {
       // Assert
       expect(response.status).toBe(401);
       expect(data.error).toBe("Invalid email or password");
-      expect(mockCreateSession).not.toHaveBeenCalled();
+      expect(createSession).not.toHaveBeenCalled();
     });
 
     it("should return identical error message for all authentication failures", async () => {
       // Arrange - create user with specific password
-      const passwordHash = await hashPassword("SecretPass123!");
-      await prisma.user.create({
-        data: {
-          email: "exists@example.com",
-          passwordHash,
-          name: "Existing User",
-          pdpaConsent: true,
-          pdpaConsentDate: new Date(),
-        },
-      });
+      const user = {
+        id: "user-123",
+        email: "exists@example.com",
+        passwordHash: "hashed-password",
+        name: "Existing User",
+        role: "STUDENT",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as import("@prisma/client").User;
 
       // Act - test non-existent user
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
       const request1 = createRequest({
         email: "nonexistent@example.com",
         password: "AnyPass123!",
@@ -173,6 +199,8 @@ describe("POST /api/auth/login", () => {
       const data1 = await response1.json();
 
       // Act - test wrong password
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(user);
+      vi.mocked(verifyPassword).mockResolvedValue(false);
       const request2 = createRequest({
         email: "exists@example.com",
         password: "WrongPass123!",
@@ -262,19 +290,19 @@ describe("POST /api/auth/login", () => {
   describe("security and data sanitization", () => {
     it("should not include password hash in response", async () => {
       // Arrange
-      const password = "SecurePass123!";
-      const passwordHash = await hashPassword(password);
-      const user = await prisma.user.create({
-        data: {
-          email: "secure@example.com",
-          passwordHash,
-          name: "Secure User",
-          pdpaConsent: true,
-          pdpaConsentDate: new Date(),
-        },
-      });
+      const user = {
+        id: "user-123",
+        email: "secure@example.com",
+        passwordHash: "super-secret-hashed-password",
+        name: "Secure User",
+        role: "STUDENT",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as import("@prisma/client").User;
 
-      mockCreateSession.mockResolvedValue({
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(user);
+      vi.mocked(verifyPassword).mockResolvedValue(true);
+      vi.mocked(createSession).mockResolvedValue({
         accessToken: "token",
         refreshToken: "refresh",
         user: { id: user.id, email: user.email, role: user.role },
@@ -283,24 +311,35 @@ describe("POST /api/auth/login", () => {
       // Act
       const request = createRequest({
         email: "secure@example.com",
-        password: password,
+        password: "SecurePass123!",
       });
       const response = await POST(request);
       const data = await response.json();
       const responseText = JSON.stringify(data);
 
       // Assert
-      expect(responseText).not.toContain(passwordHash);
+      expect(responseText).not.toContain("super-secret-hashed-password");
       expect(responseText).not.toContain("password");
       expect(responseText).not.toContain("passwordHash");
     });
 
-    // Note: Database error handling is tested in integration tests
-    // This test would require mocking at module level which conflicts with
-    // the real prisma client used by other tests
-    it.skip("should handle database errors gracefully", async () => {
-      // Skipped - requires module-level mocking incompatible with other tests
-      // The route does handle errors with 500 status as shown in the implementation
+    it("should handle database errors gracefully", async () => {
+      // Arrange - mock prisma to simulate error
+      vi.mocked(prisma.user.findUnique).mockRejectedValue(
+        new Error("Database connection failed"),
+      );
+
+      // Act
+      const request = createRequest({
+        email: "test@example.com",
+        password: "SomePassword123!",
+      });
+      const response = await POST(request);
+      const data = await response.json();
+
+      // Assert
+      expect(response.status).toBe(500);
+      expect(data.error).toBe("An unexpected error occurred");
     });
   });
 });
