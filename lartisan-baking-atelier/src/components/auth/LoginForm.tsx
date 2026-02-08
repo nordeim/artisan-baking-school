@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -74,9 +74,11 @@ export function LoginForm({ onSuccess, className }: LoginFormProps) {
   const password = watch("password");
 
   // Clear error when user types
-  if (error && (email || password)) {
-    setError(null);
-  }
+  useEffect(() => {
+    if (error && (email || password)) {
+      setError(null);
+    }
+  }, [email, password]);
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);

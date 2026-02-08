@@ -28,6 +28,16 @@ export interface LoginCredentials {
 }
 
 /**
+ * Registration credentials
+ */
+export interface RegisterCredentials {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+/**
  * Auth context state and methods
  */
 export interface AuthContextType {
@@ -36,6 +46,9 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (
     credentials: LoginCredentials,
+  ) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    credentials: RegisterCredentials,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -191,11 +204,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(false);
   }, [fetchCurrentUser]);
 
+  /**
+   * Register new user
+   *
+   * @param credentials - Name, email, password, and confirmPassword
+   * @returns Success status and optional error message
+   */
+  const register = useCallback(
+    async (
+      credentials: RegisterCredentials,
+    ): Promise<{ success: boolean; error?: string }> => {
+      setIsLoading(true);
+
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.user) {
+          setUser(data.user);
+          return { success: true };
+        } else {
+          return {
+            success: false,
+            error: data.error || "Registration failed",
+          };
+        }
+      } catch (error) {
+        console.error("Registration error:", error);
+        return {
+          success: false,
+          error: "An error occurred during registration",
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
   const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated,
     login,
+    register,
     logout,
     refreshUser,
   };

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, act, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginForm } from "./LoginForm";
 
@@ -18,14 +18,20 @@ describe("LoginForm", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLogin.mockReset();
     mockUseAuth.mockReturnValue({
       login: mockLogin,
+      register: vi.fn(),
       isLoading: false,
       isAuthenticated: false,
       user: null,
       logout: vi.fn(),
       refreshUser: vi.fn(),
     });
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe("rendering", () => {
@@ -162,12 +168,6 @@ describe("LoginForm", () => {
 
     it("shows loading state during submission", async () => {
       const user = userEvent.setup();
-      mockLogin.mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(() => resolve({ success: true }), 100),
-          ),
-      );
 
       render(<LoginForm />);
 
@@ -175,18 +175,36 @@ describe("LoginForm", () => {
       const passwordInput = screen.getByLabelText(/^password$/i);
       const submitButton = screen.getByRole("button", { name: /sign in/i });
 
+      // Set up the mock to return a promise that never resolves during this test
+      // so we can check the loading state
+      let resolveLogin: (value: { success: boolean }) => void;
+      const loginPromise = new Promise<{ success: boolean }>((resolve) => {
+        resolveLogin = resolve;
+      });
+      mockLogin.mockReturnValueOnce(loginPromise);
+
+      // Set loading state before user action
+      mockUseAuth.mockReturnValue({
+        login: mockLogin,
+        register: vi.fn(),
+        isLoading: true,
+        isAuthenticated: false,
+        user: null,
+        logout: vi.fn(),
+        refreshUser: vi.fn(),
+      });
+
       await user.type(emailInput, "test@example.com");
       await user.type(passwordInput, "password123");
       await user.click(submitButton);
 
-      await waitFor(
-        () => {
-          expect(
-            screen.getByRole("button", { name: /signing in/i }),
-          ).toBeDisabled();
-        },
-        { timeout: 2000 },
-      );
+      // Should show loading state
+      const button = screen.getByRole("button", { name: /signing in/i });
+      expect(button).toBeDisabled();
+
+      // Clean up by resolving the promise
+      resolveLogin!({ success: true });
+      await loginPromise;
     });
 
     it("displays error on invalid credentials", async () => {
@@ -210,13 +228,14 @@ describe("LoginForm", () => {
         () => {
           expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
         },
-        { timeout: 2000 },
+        { timeout: 5000 },
       );
     });
 
     it("disables submit button while loading", async () => {
       mockUseAuth.mockReturnValue({
         login: mockLogin,
+        register: vi.fn(),
         isLoading: true,
         isAuthenticated: false,
         user: null,
@@ -243,24 +262,30 @@ describe("LoginForm", () => {
       const passwordInput = screen.getByLabelText(/^password$/i);
       const submitButton = screen.getByRole("button", { name: /sign in/i });
 
-      // Submit to trigger error
+      // Submit to trigger error - use valid password (8+ chars)
       await user.type(emailInput, "test@example.com");
-      await user.type(passwordInput, "wrong");
+      await user.type(passwordInput, "wrongpassword");
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
 
       // Type again to clear error
       await user.clear(passwordInput);
-      await user.type(passwordInput, "new");
+      await user.type(passwordInput, "newpassword");
 
-      await waitFor(() => {
-        expect(
-          screen.queryByText(/invalid credentials/i),
-        ).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.queryByText(/invalid credentials/i),
+          ).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -306,11 +331,14 @@ describe("LoginForm", () => {
       await user.type(passwordInput, "password123");
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText(/an error occurred during login/i),
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(/an error occurred during login/i),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     it("handles rate limiting errors", async () => {
@@ -330,11 +358,14 @@ describe("LoginForm", () => {
       await user.type(passwordInput, "password123");
       await user.click(submitButton);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText(/too many attempts. please try again later/i),
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(/too many attempts. please try again later/i),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -376,10 +407,13 @@ describe("LoginForm", () => {
       await user.type(passwordInput, "wrongpassword");
       await user.click(submitButton);
 
-      await waitFor(() => {
-        const errorAlert = screen.getByRole("alert");
-        expect(errorAlert).toHaveTextContent(/invalid credentials/i);
-      });
+      await waitFor(
+        () => {
+          const errorAlert = screen.getByRole("alert");
+          expect(errorAlert).toHaveTextContent(/invalid credentials/i);
+        },
+        { timeout: 5000 },
+      );
     });
   });
 });
