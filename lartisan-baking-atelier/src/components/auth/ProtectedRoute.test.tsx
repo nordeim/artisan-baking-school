@@ -39,7 +39,6 @@ describe("ProtectedRoute", () => {
 
   describe("Authentication Check", () => {
     it("should render children when user is authenticated", () => {
-      // Setup authenticated state
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: {
           id: "1",
@@ -66,7 +65,6 @@ describe("ProtectedRoute", () => {
     });
 
     it("should redirect to login when user is not authenticated", async () => {
-      // Setup unauthenticated state
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: null,
         isLoading: false,
@@ -84,15 +82,13 @@ describe("ProtectedRoute", () => {
       );
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith("/login");
+        expect(mockPush).toHaveBeenCalledWith("/login?redirect=%2Fdashboard");
       });
 
-      // Content should not be rendered
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
 
     it("should show loading state while checking authentication", () => {
-      // Setup loading state
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: null,
         isLoading: true,
@@ -109,17 +105,13 @@ describe("ProtectedRoute", () => {
         </ProtectedRoute>,
       );
 
-      // Should show loading spinner
       expect(screen.getByRole("status")).toBeInTheDocument();
-
-      // Content should not be rendered yet
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
   });
 
   describe("Role-Based Access Control", () => {
     it("should render content when user has required role", () => {
-      // Setup authenticated admin user
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: {
           id: "1",
@@ -145,7 +137,6 @@ describe("ProtectedRoute", () => {
     });
 
     it("should redirect when user does not have required role", async () => {
-      // Setup authenticated regular user (not admin)
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: {
           id: "1",
@@ -174,8 +165,7 @@ describe("ProtectedRoute", () => {
       expect(screen.queryByTestId("admin-content")).not.toBeInTheDocument();
     });
 
-    it("should handle USER role requirement", async () => {
-      // Setup authenticated user
+    it("should handle USER role requirement", () => {
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: {
           id: "1",
@@ -203,7 +193,6 @@ describe("ProtectedRoute", () => {
 
   describe("Redirect with URL Preservation", () => {
     it("should preserve current pathname for redirect back", async () => {
-      // Setup unauthenticated state
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: null,
         isLoading: false,
@@ -214,7 +203,6 @@ describe("ProtectedRoute", () => {
         refreshUser: vi.fn(),
       });
 
-      // Set current pathname
       vi.mocked(nextNavigation.usePathname).mockReturnValue(
         "/dashboard/settings",
       );
@@ -227,13 +215,12 @@ describe("ProtectedRoute", () => {
 
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith(
-          "/login?redirect=/dashboard/settings",
+          "/login?redirect=%2Fdashboard%2Fsettings",
         );
       });
     });
 
     it("should not add redirect param when on login page", async () => {
-      // Setup unauthenticated state
       vi.mocked(AuthProviderModule.useAuth).mockReturnValue({
         user: null,
         isLoading: false,
@@ -244,7 +231,6 @@ describe("ProtectedRoute", () => {
         refreshUser: vi.fn(),
       });
 
-      // Set current pathname to login
       vi.mocked(nextNavigation.usePathname).mockReturnValue("/login");
 
       render(
@@ -254,7 +240,6 @@ describe("ProtectedRoute", () => {
       );
 
       await waitFor(() => {
-        // Should not add redirect param when already on login
         expect(mockPush).toHaveBeenCalledWith("/login");
       });
     });
@@ -279,7 +264,7 @@ describe("ProtectedRoute", () => {
       );
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith("/login");
+        expect(mockPush).toHaveBeenCalledWith("/login?redirect=%2Fdashboard");
       });
     });
 
@@ -300,7 +285,6 @@ describe("ProtectedRoute", () => {
         </ProtectedRoute>,
       );
 
-      // Should redirect because role check fails
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith("/");
       });
@@ -327,14 +311,12 @@ describe("ProtectedRoute", () => {
         expect(mockPush).toHaveBeenCalledTimes(1);
       });
 
-      // Rerender should not trigger another redirect
       rerender(
         <ProtectedRoute>
           <div data-testid="protected-content">Protected Content</div>
         </ProtectedRoute>,
       );
 
-      // Should still only be called once
       expect(mockPush).toHaveBeenCalledTimes(1);
     });
   });
