@@ -423,15 +423,15 @@
     @apply py-16 sm:py-20 lg:py-24;
   }
 
-  /* Prose Styles */
-  .prose-editorial {
-    @apply prose prose-lg;
-    @apply prose-headings:font-serif prose-headings:text-charcoal;
-    @apply prose-p:text-charcoal-light prose-p:leading-relaxed;
-    @apply prose-a:text-burnt prose-a:no-underline hover:prose-a:underline;
-    @apply prose-strong:text-charcoal;
-    @apply prose-blockquote:border-l-copper prose-blockquote:bg-bone-dark/50;
-    @apply prose-code:text-copper;
-    @apply max-w-none;
-  }
+  /* Prose Styles - Commented out until @tailwindcss/typography is installed */
+  /* .prose-editorial {
+@apply prose prose-lg;
+@apply prose-headings:font-serif prose-headings:text-charcoal;
+@apply prose-p:text-charcoal-light prose-p:leading-relaxed;
+@apply prose-a:text-burnt prose-a:no-underline hover:prose-a:underline;
+@apply prose-strong:text-charcoal;
+@apply prose-blockquote:border-l-copper prose-blockquote:bg-bone-dark/50;
+@apply prose-code:text-copper;
+@apply max-w-none;
+} */
 }
