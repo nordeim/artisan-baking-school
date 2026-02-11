@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { generatePasswordResetToken } from "@/lib/auth";
 import { z } from "zod";
 
@@ -54,10 +54,8 @@ export async function POST(request: NextRequest) {
     // Validate input
     const result = forgotPasswordSchema.safeParse(body);
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.errors[0].message },
-        { status: 400 },
-      );
+      const errorMessage = result.error.issues[0]?.message || "Invalid input";
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
     const { email } = result.data;

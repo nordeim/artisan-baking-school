@@ -3,7 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowLeft, RefreshCw, LogIn } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   children: ReactNode;

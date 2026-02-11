@@ -73,14 +73,15 @@ model User {
   updatedAt DateTime @updatedAt
   
   // Relations
-  accounts     Account[]
-  sessions     Session[]
-  orders       Order[]
-  cart         Cart?
-  progress     Progress[]
-  reviews      Review[]
+accounts Account[]
+  sessions Session[]
+  orders Order[]
+  cart Cart?
+  progress Progress[]
+  reviews Review[]
   achievements UserAchievement[]
-  
+  passwordResets PasswordReset[]
+
   @@index([email])
   @@index([role])
 }
@@ -443,4 +444,24 @@ model UserAchievement {
   @@unique([userId, achievementId])
   @@index([userId])
   @@index([userId, unlocked])
+}
+
+// ============================================
+// PASSWORD RESET MODEL
+// ============================================
+
+model PasswordReset {
+  id String @id @default(cuid())
+  userId String
+  token String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
 }
