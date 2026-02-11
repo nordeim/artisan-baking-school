@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Navbar } from "@/components/navigation/Navbar";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -107,8 +108,10 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-bone font-sans antialiased">
         <AuthProvider>
-          <Navbar />
-          <main>{children}</main>
+          <ToastProvider>
+            <Navbar />
+            <main>{children}</main>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
